@@ -1,5 +1,3 @@
-OBJS_BOOTPACK = bootpack.obj naskfunc.obj hankaku.obj graphic.obj dsctbl.obj int.obj fifo.obj keyboard.obj mouse.obj
-
 TOOLPATH = ../z_tools/
 INCPATH  = ../z_tools/haribote/
 
@@ -8,21 +6,19 @@ NASK     = $(TOOLPATH)nask
 CC1      = $(TOOLPATH)gocc1 -I$(INCPATH) -Os -Wall -quiet
 GAS2NASK = $(TOOLPATH)gas2nask -a
 OBJ2BIM  = $(TOOLPATH)obj2bim
-MAKEFONT = $(TOOLPATH)makefont
-BIN2OBJ  = $(TOOLPATH)bin2obj
 BIM2HRB  = $(TOOLPATH)bim2hrb
 RULEFILE = $(TOOLPATH)haribote/haribote.rul
 EDIMG    = $(TOOLPATH)edimg
 IMGTOL   = $(TOOLPATH)imgtol.com
 COPY     = cp
-DEL      = rm -f
+DEL      = rm
 
-# é»˜è®¤çš„æ“ä½œ
+# ƒfƒtƒHƒ‹ƒg“®ì
 
 default :
 	$(MAKE) img
 
-# æ–‡ä»¶ç”Ÿäº§è§„åˆ™
+# ƒtƒ@ƒCƒ‹¶¬‹K‘¥
 
 ipl10.bin : ipl10.nas Makefile
 	$(NASK) ipl10.nas ipl10.bin ipl10.lst
@@ -30,26 +26,21 @@ ipl10.bin : ipl10.nas Makefile
 asmhead.bin : asmhead.nas Makefile
 	$(NASK) asmhead.nas asmhead.bin asmhead.lst
 
-#ç¼–è¯‘å­—ä½“æ–‡ä»¶
-hankaku.bin : hankaku.txt Makefile
-	$(MAKEFONT) hankaku.txt hankaku.bin
+bootpack.gas : bootpack.c Makefile
+	$(CC1) -o bootpack.gas bootpack.c
 
-hankaku.obj : hankaku.bin Makefile
-	$(BIN2OBJ) hankaku.bin hankaku.obj _hankaku
+bootpack.nas : bootpack.gas Makefile
+	$(GAS2NASK) bootpack.gas bootpack.nas
 
-#é€šè¿‡è§„åˆ™è¿›è¡Œ,å°†æ–‡ä»¶å¤¹ä¸‹çš„æ‰€æœ‰.cæ–‡ä»¶ç¼–è¯‘
-%.gas : %.c Makefile
-	$(CC1) -o $*.gas $*.c
+bootpack.obj : bootpack.nas Makefile
+	$(NASK) bootpack.nas bootpack.obj bootpack.lst
 
-%.nas : %.gas Makefile
-	$(GAS2NASK) $*.gas $*.nas
+naskfunc.obj : naskfunc.nas Makefile
+	$(NASK) naskfunc.nas naskfunc.obj naskfunc.lst
 
-%.obj : %.nas Makefile
-	$(NASK) $*.nas $*.obj $*.lst
-
-bootpack.bim : $(OBJS_BOOTPACK) Makefile
+bootpack.bim : bootpack.obj naskfunc.obj Makefile
 	$(OBJ2BIM) @$(RULEFILE) out:bootpack.bim stack:3136k map:bootpack.map \
-		$(OBJS_BOOTPACK)
+		bootpack.obj naskfunc.obj
 # 3MB+64KB=3136KB
 
 bootpack.hrb : bootpack.bim Makefile
@@ -64,7 +55,7 @@ haribote.img : ipl10.bin haribote.sys Makefile
 		copy from:haribote.sys to:@: \
 		imgout:haribote.img
 
-# å‘½ä»¤
+# ƒRƒ}ƒ“ƒh
 
 img :
 	$(MAKE) haribote.img
@@ -83,8 +74,6 @@ clean :
 	-$(DEL) *.gas
 	-$(DEL) *.obj
 	-$(DEL) bootpack.nas
-	-$(DEL) graphic.nas
-	-$(DEL) dsctbl.nas
 	-$(DEL) bootpack.map
 	-$(DEL) bootpack.bim
 	-$(DEL) bootpack.hrb

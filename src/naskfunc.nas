@@ -1,34 +1,53 @@
 ; naskfunc
 ; TAB=4
 
-[FORMAT "WCOFF"]				; ƒIƒuƒWƒFƒNƒgƒtƒ@ƒCƒ‹‚ğì‚éƒ‚[ƒh	
-[INSTRSET "i486p"]				; 486‚Ì–½—ß‚Ü‚Åg‚¢‚½‚¢‚Æ‚¢‚¤‹Lq
-[BITS 32]						; 32ƒrƒbƒgƒ‚[ƒh—p‚Ì‹@ŠBŒê‚ğì‚ç‚¹‚é
-[FILE "naskfunc.nas"]			; ƒ\[ƒXƒtƒ@ƒCƒ‹–¼î•ñ
+[FORMAT "WCOFF"]				; åˆ¶ä½œç›®æ ‡æ–‡ä»¶çš„æ¨¡å¼
+[INSTRSET "i486p"]				; å‘Šè¯‰nask,è¿™ä¸ªæ˜¯ç»™486çš„
+[BITS 32]						; åˆ¶ä½œ32ä½æ¨¡å¼ç”¨çš„æœºæ¢°è¯­è¨€
+[FILE "naskfunc.nas"]			; æ–‡ä»¶åç§°
 
+
+
+; åˆ¶ä½œç›®æ ‡æ–‡ä»¶çš„ä¿¡æ¯
+
+[FILE "naskfunc.nas"]			; æºæ–‡ä»¶åä¿¡æ¯
+
+		GLOBAL	_write_mem8			; ç¨‹åºä¸­åŒ…å«çš„æ–‡ä»¶åç§°
 		GLOBAL	_io_hlt, _io_cli, _io_sti, _io_stihlt
 		GLOBAL	_io_in8,  _io_in16,  _io_in32
 		GLOBAL	_io_out8, _io_out16, _io_out32
 		GLOBAL	_io_load_eflags, _io_store_eflags
+		GLOBAL	_load_gdtr, _load_idtr
+		GLOBAL	_asm_inthandler21, _asm_inthandler27, _asm_inthandler2c
+		EXTERN	_inthandler21, _inthandler27, _inthandler2c
 
-[SECTION .text]
+
+; ä»¥ä¸‹æ˜¯å®é™…çš„å‡½æ•°
+
+[SECTION .text]		; ç›®æ ‡æ–‡ä»¶ä¸­çš„ç¨‹åº
 
 _io_hlt:	; void io_hlt(void);
 		HLT
 		RET
 
-_io_cli:	; void io_cli(void);
-		CLI
+_write_mem8:	; void write_mem8(int addr,int data);
+		MOV	ECX,[ESP+4]		;[ESP +4]ä¸­å­˜æ”¾çš„æ˜¯åœ°å€,å°†å…¶è¯»å…¥ECX
+		MOV	AL,[ESP+8]		;[ESP +8]ä¸­å­˜æ”¾çš„æ˜¯æ•°æ®,å°†å…¶è¯»å…¥AL
+		MOV	[ECX],AL
 		RET
+
+_io_cli:	; void io_cli(void);
+	CLI
+	RET
 
 _io_sti:	; void io_sti(void);
-		STI
-		RET
+	STI
+	RET
 
 _io_stihlt:	; void io_stihlt(void);
-		STI
-		HLT
-		RET
+	STI
+	HLT
+	RET
 
 _io_in8:	; int io_in8(int port);
 		MOV		EDX,[ESP+4]		; port
@@ -66,12 +85,73 @@ _io_out32:	; void io_out32(int port, int data);
 		RET
 
 _io_load_eflags:	; int io_load_eflags(void);
-		PUSHFD		; PUSH EFLAGS ‚Æ‚¢‚¤ˆÓ–¡
+		PUSHFD		; PUSH EFLAGS 
 		POP		EAX
 		RET
 
 _io_store_eflags:	; void io_store_eflags(int eflags);
 		MOV		EAX,[ESP+4]
 		PUSH	EAX
-		POPFD		; POP EFLAGS ‚Æ‚¢‚¤ˆÓ–¡
+		POPFD		; POP EFLAGS
 		RET
+
+_load_gdtr:		; void load_gdtr(int limit, int addr);
+		MOV		AX,[ESP+4]		; limit
+		MOV		[ESP+6],AX
+		LGDT	[ESP+6]
+		RET
+
+_load_idtr:		; void load_idtr(int limit, int addr);
+		MOV		AX,[ESP+4]		; limit
+		MOV		[ESP+6],AX
+		LIDT	[ESP+6]
+		RET
+;(é¼ æ ‡)å°†å¯„å­˜å™¨çš„å€¼ä¿å­˜åœ¨å †æ ˆé‡Œ,é˜²æ­¢ä¸­æ–­å¤„ç†å‘ç”Ÿå,æ‰§è¡ŒIRETDå,å„ä¸ªå¯„å­˜å™¨çš„å€¼é”™ä¹±
+_asm_inthandler21:
+		PUSH	ES
+		PUSH	DS
+		PUSHAD
+		MOV		EAX,ESP
+		PUSH	EAX
+		MOV		AX,SS
+		MOV		DS,AX
+		MOV		ES,AX
+		CALL	_inthandler21
+		POP		EAX
+		POPAD
+		POP		DS
+		POP		ES
+		IRETD
+
+_asm_inthandler27:
+		PUSH	ES
+		PUSH	DS
+		PUSHAD
+		MOV		EAX,ESP
+		PUSH	EAX
+		MOV		AX,SS
+		MOV		DS,AX
+		MOV		ES,AX
+		CALL	_inthandler27
+		POP		EAX
+		POPAD
+		POP		DS
+		POP		ES
+		IRETD
+
+;(é”®ç›˜)
+_asm_inthandler2c:
+		PUSH	ES
+		PUSH	DS
+		PUSHAD
+		MOV		EAX,ESP
+		PUSH	EAX
+		MOV		AX,SS
+		MOV		DS,AX
+		MOV		ES,AX
+		CALL	_inthandler2c
+		POP		EAX
+		POPAD
+		POP		DS
+		POP		ES
+		IRETD
